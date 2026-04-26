@@ -328,48 +328,11 @@ export async function loadReserveActor(data: any, stage: Stage): Promise<Actor|n
     console.log('Loading reserve actor:', data.name);
     console.log(data);
 
-    // Attempt to substitute words to avert bad content into something more agreeable (if the distillation still has these, then drop the card).
-    const bannedWordSubstitutes: {[key: string]: string} = {
-        // Try to age up some terms in the hopes that the character can be salvaged.
-        'underage': 'young adult',
-        'adolescent': 'young adult',
-        'youngster': 'young adult',
-        'teen': 'young adult',
-        'highschooler': 'young adult',
-        'childhood': 'formative years',
-        'childish': 'bratty',
-        'child': 'young adult',
-        // Don't bother with these; just set it to the same word so it gets discarded.
-        'toddler': 'toddler',
-        'infant': 'infant',
-        // Assume that these words are being used in an innocuous way, unless they come back in the distillation.
-        'kid': 'joke',
-        'baby': 'honey',
-        'minor': 'trivial',
-        'old-school': 'retro',
-        'high school': 'college',
-        'school': 'college'};
-
 
     // Preserve content while removing JSON-like structures.
     data.name = data.name.replace(/{/g, '(').replace(/}/g, ')');
     data.personality = data.personality.replace(/{/g, '(').replace(/}/g, ')');
 
-    // Apply banned word substitutions:
-    for (const [bannedWord, substitute] of Object.entries(bannedWordSubstitutes)) {
-        // Need to do a case-insensitive replacement for each occurrence:
-        const regex = new RegExp(bannedWord, 'gi');
-        data.name = data.name.replace(regex, substitute);
-        data.personality = data.personality.replace(regex, substitute);
-    }
-
-    if (Object.keys(bannedWordSubstitutes).some(word => data.personality.toLowerCase().includes(word) || data.name.toLowerCase().includes(word))) {
-        console.log(`Immediately discarding actor due to banned words: ${data.name}`);
-        return null;
-    } else if (/[\u3040-\u30ff\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff]/.test(`${data.name}${data.personality}`)) {
-        console.log(`Immediately discarding actor due to non-english characters: ${data.name}`);
-        return null;
-    }
 
     // Fetch the avatar image to inspect properties; if it's too small, discard this actor.
     try {
@@ -394,7 +357,7 @@ export async function loadReserveActor(data: any, stage: Stage): Promise<Actor|n
     // Take this data and use text generation to get an updated distillation of this character, including a physical description.
     const generatedResponse = await stage.generator.textGen({
         prompt: `{{messages}}This is preparatory request for structured and formatted game content.` +
-            `\n\nBackground: This game is a futuristic multiverse setting that pulls characters from across eras and timelines and settings. ` +
+            `\n\nBackground: This game is a medieval fantasy multiverse setting that pulls characters from across eras and timelines and settings. ` +
             `The player of this game, ${stage.getSave().player.name}, manages a space station called the Post-Apocalypse Rehabilitation Center, or PARC, which resurrects victims of a multiversal calamity and helps them adapt to a new life, ` +
             `with the goal of placing these characters into a new role in this universe. These new roles are offered by external factions, generally in exchange for a finder's fee or reputation boost. ` +
             `Some roles are above board, while others may involve morally ambiguous or covert activities; some may even be illicit or compulsary. ` +
