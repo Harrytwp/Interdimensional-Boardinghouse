@@ -35,7 +35,6 @@ export type SaveType = {
     echoes: (Actor | null)[]; // actors currently in echo slots (can be null for empty slots)
     actors: {[key: string]: Actor};
     factions: {[key: string]: Faction};
-    bannedTags?: string[];
     layout: Layout;
     customModules?: {[key: string]: ModuleIntrinsic};
     day: number;
@@ -81,21 +80,16 @@ export class Stage extends StageBase<InitStateType, ChatStateType, MessageStateT
         'FUZZ',
         'child',
         'teenager',
-        'narrator',
         'underage',
-        'multi-character',
-        'multiple characters',
-        'nonenglish',
-        'non-english',
         'famous people',
         'celebrity',
         'real person',
         'feral'
     ];
     // At least one of these is required for a character search; some sort of gender helps indicate that the card represents a singular person.
-    readonly actorTags = ['male', 'female', 'woman', 'man', 'masculine', 'feminine', 'non-binary', 'trans', 'genderqueer', 'genderfluid', 'agender', 'androgyne', 'intersex', 'futa', 'futanari', 'hermaphrodite'];
+    readonly actorTags = ['male', 'female', 'woman', 'man', 'masculine', 'feminine', 'non-binary', 'trans', 'genderqueer', 'genderfluid', 'agender', 'androgyne', 'intersex', 'futa', 'futanari', 'tomboy', 'goth', 'deaddove', 'nsfl', 'hermaphrodite'];
     // At least one of these is required for a faction search; helps indicate that the card has a focus on setting or tone.
-    readonly factionTags = ['sci-fi', 'science fiction', 'cyberpunk', 'post-apocalyptic', 'dystopian', 'space', 'alien', 'robot', 'setting', 'world', 'narrator', 'scenario'];
+    readonly factionTags = ['medieval', 'fantasy', 'history', 'magic', 'robot', 'setting', 'world', 'narrator', 'scenario'];
     readonly characterSearchQuery = `https://inference.chub.ai/search?first=${this.FETCH_AT_TIME}&exclude_tags={{EXCLUSIONS}}&page={{PAGE_NUMBER}}&tags={{SEARCH_TAGS}}&sort=random&asc=false&include_forks=false&nsfw=true&nsfl=false` +
         `&nsfw_only=false&require_images=false&require_example_dialogues=false&require_alternate_greetings=false&require_custom_prompt=false&exclude_mine=false&min_tokens=200&max_tokens=5000` +
         `&require_expressions=false&require_lore=false&mine_first=false&require_lore_embedded=false&require_lore_linked=false&my_favorites=false&inclusive_or=true&recommended_verified=false&count=false&min_tags=3`;
@@ -110,6 +104,8 @@ export class Stage extends StageBase<InitStateType, ChatStateType, MessageStateT
             'Stories set in this universe are lighthearted and comedic, often featuring eccentric characters and ridiculous situations. The tone is irreverent and playful, with a focus on humor and satire.',
         'Romantic': 'The universe is a lush and passionate realm, where love and desire are powerful forces that shape the lives of its inhabitants. ' +
             'Stories set in this universe are emotionally charged and erotic, often exploring complex relationships and intense emotions. The tone is sensual and evocative, with a focus on romance and interpersonal connections.',
+         'Dark': 'The universe is a harsh place. ' +
+            'Stories set in this universe are dark and intense, usually resolving badly for all but the player. The tone is explicit and vivid, with a focus on power dynamics and gradual corruption.',
     };
 
     private actorPageNumber = Math.floor(Math.random() * this.MAX_PAGES);
@@ -198,11 +194,11 @@ export class Stage extends StageBase<InitStateType, ChatStateType, MessageStateT
         layout.setModuleAt(centerX - 1, centerY - 1, createModule('comms', { id: `comms-${centerX - 1}-${centerY - 1}`, attributes: {} }));
         this.userId = Object.values(users)[0].anonymizedId;
         this.freshSave = { player: {name: Object.values(users)[0].name, description: Object.values(users)[0].chatProfile || ''}, 
-            directorModule: {name: 'Director\'s Cabin', roleName: 'Maid'},
+            directorModule: {name: 'Master\'s Study', roleName: 'Maid'},
             aide: {
                 name: 'Soji', 
-                description: `Your holographic assistant is acutely familiar with the technical details of your Post-Apocalypse Rehabilitation Center, so you don't have to be! ` +
-                `Your StationAide™ comes pre-programmed with a friendly and non-condescending demeanor that will leave you feeling empowered and never patronized; ` +
+                description: `Your demonic assistant is acutely familiar with the arcane details of your Interdimensional Boardinghouse, so you don't have to be! ` +
+                `Your demonic assistant has a friendly and non-condescending demeanor that will leave you feeling empowered and never patronized; ` +
                 `your bespoke projection comes with an industry-leading feminine form in a pleasing shade of default blue, but, as always, StationAide™ remains infinitely customizable to suit your tastes.`}, 
             echoes: [], actors: {}, factions: {}, layout: layout, day: 1, turn: 0, currentSkit: undefined, typeOutSpeed: this.DEFAULT_TYPE_OUT_SPEED, reserveActors: [], emotionPrompts: getDefaultEmotionPromptMap() };
 
@@ -324,7 +320,7 @@ export class Stage extends StageBase<InitStateType, ChatStateType, MessageStateT
                     // Aide goes nowhere by default.
                     actor.locationId = '';
                 } else if (!actor.locationId || save.layout.getModulesWhere(m => actor.locationId === m.id).length > 0) {
-                    // If actor has no location or a location on the PARC (not away to a faction at the moment)
+                    // If actor has no location or a location on the boardinghouse (not away to a faction at the moment)
                     // Check if actor didn't move anywhere in the last skit, then put them in a random non-quarters module:
                     const previousSkit = (save.timeline && save.timeline.length > 0) ? save.timeline[save.timeline.length - 1].skit : undefined;
                     if ((!previousSkit || previousSkit.script.every(entry => !entry.movements || !Object.keys(entry.movements).some(moverId => moverId === actor.id)))) {
@@ -497,10 +493,10 @@ export class Stage extends StageBase<InitStateType, ChatStateType, MessageStateT
         
         const placeholderModule = {
             name: this.getSave().directorModule.name,
-            skitPrompt: 'Crew quarters are personal living spaces for station inhabitants. Scenes here often involve personal interactions:  revelations, troubles, interests, or relaxation.',
-            imagePrompt: 'A sci-fi living quarters with a bed, personal storage, and ambient lighting, reflecting the occupant\'s personality.',
-            baseImageUrl: 'https://media.charhub.io/5e39db53-9d66-459d-8926-281b3b089b36/8ff20bdb-b719-4cf7-bf53-3326d6f9fcaa.png', 
-            defaultImageUrl: 'https://media.charhub.io/99ffcdf5-a01b-43cf-81e5-e7098d8058f5/d1ec2e67-9124-4b8b-82d9-9685cfb973d2.png',
+            skitPrompt: 'Slave quarters are personal living spaces for boardinghouse inhabitants. Scenes here often involve personal interactions:  revelations, troubles, interests, or relaxation.',
+            imagePrompt: 'medieval fantasy living quarters with a bed, personal storage, and ambient lighting, reflecting the occupant\'s personality.',
+            baseImageUrl: 'https://media.charhub.io/85dec4c6-a3a9-4d1e-be5f-266bd9aa3171/27272f98-6ce9-467b-8aeb-e40eae5ead37.png', 
+            defaultImageUrl: 'https://media.charhub.io/4dbd4725-a3cf-49c7-b8d3-06f27199b8f7/16a39e65-3528-44e8-a043-9a0559b24f49.png',
             role: this.getSave().directorModule.roleName,
             roleDescription: '',
             cost: {
@@ -731,7 +727,6 @@ export class Stage extends StageBase<InitStateType, ChatStateType, MessageStateT
                 let reserveActors = this.getSave().reserveActors || [];
                 while (reserveActors.length < this.RESERVE_ACTORS) {
                     // Populate reserveActors; this is loaded with data from a service, calling the characterServiceQuery URL:
-                    const exclusions = (this.getSave().bannedTags || []).concat(this.bannedTagsDefault).map(tag => encodeURIComponent(tag)).join('%2C');
                     const response = await fetch(this.characterSearchQuery
                         .replace('{{PAGE_NUMBER}}', this.actorPageNumber.toString())
                         .replace('{{EXCLUSIONS}}', exclusions ? exclusions + '%2C' : '')
@@ -779,7 +774,6 @@ export class Stage extends StageBase<InitStateType, ChatStateType, MessageStateT
                 while (eligibleFactions.length < this.MAX_FACTIONS) {
                     const needed = this.MAX_FACTIONS - eligibleFactions.length;
                     // Populate reserveFactions; this is loaded with data from a service, calling the characterSearchQuery URL:
-                    const exclusions = (this.getSave().bannedTags || []).concat(this.bannedTagsDefault).map(tag => encodeURIComponent(tag)).join('%2C');
                     const response = await fetch(this.characterSearchQuery
                         .replace('{{PAGE_NUMBER}}', this.factionPageNumber.toString())
                         .replace('{{EXCLUSIONS}}', exclusions ? exclusions + '%2C' : '')
@@ -1038,7 +1032,7 @@ export class Stage extends StageBase<InitStateType, ChatStateType, MessageStateT
                 if (actor && actor.factionId != newFactionId) {
                     console.log(`Changing ${actor.name}'s faction from ${actor.factionId || 'PARC'} to ${newFactionId || 'PARC'}`);
                     
-                    // If currently a faction rep and joining PARC (factionId = ''), need to generate a new faction rep:
+                    // If currently a faction rep and joining Boardinghouse (factionId = ''), need to generate a new faction rep:
                     if (newFactionId === '') {
                         const currentFaction = Object.values(save.factions).find(faction => faction.representativeId === actor.id);
                         this.pushToTimeline(save, `${actor.name}, formerly of the ${currentFaction?.name || 'unknown faction'} joined the ${newFactionId ? save.factions[newFactionId]?.name || 'unknown faction' : 'PARC'}.`);
