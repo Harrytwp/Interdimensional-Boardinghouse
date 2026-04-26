@@ -14,7 +14,7 @@ class Faction {
     themeColor: string;
     themeFont: string;
     reputation: number = 3; // 1-10, starts at 3
-    active: boolean = false; // Whether the faction is still doing business with PARC
+    active: boolean = false; // Whether the faction is still doing business with the Mansion
     representativeId: string | null = null;
     backgroundImageUrl: string = '';
     module?: ModuleIntrinsic;
@@ -57,23 +57,23 @@ class Faction {
     }
 
     /**
-     * Get a prompt-style description of the PARC's relationship with this faction based on reputation
+     * Get a prompt-style description of the Mansion's relationship with this faction based on reputation
      */
     getReputationDescription(): string {
         if (this.reputation <= 0) {
-            return 'They have cut ties with the PARC.';
+            return 'They have cut ties with the the Mansion';
         } else if (this.reputation <= 1) {
-            return 'They have a very poor opinion of the PARC; if pushed, they will cut ties with the PARC entirely.';
+            return 'They have a very poor opinion of the Mansion; if pushed, they will cut ties with the Mansion entirely.';
         } else if (this.reputation <= 2) {
-            return 'They have a low opinion of the PARC and consider the relationship strained.';
+            return 'They have a low opinion of the Mansion and consider the relationship strained.';
         } else if (this.reputation <= 4) {
-            return 'They view the PARC with caution and maintain only necessary interactions.';
+            return 'They view the Mansion with caution and maintain only necessary interactions.';
         } else if (this.reputation <= 6) {
-            return 'They have a neutral, professional relationship with the PARC.';
+            return 'They have a neutral, professional relationship with the Mansion.';
         } else if (this.reputation <= 8) {
-            return 'They regard the PARC favorably and maintain a positive working relationship.';
+            return 'They regard the MansionC favorably and maintain a positive working relationship.';
         } else {
-            return 'They hold the PARC in high esteem and consider them a trusted partner.';
+            return 'They hold the Mansion in high esteem and consider them a trusted partner.';
         }
     }
 }
@@ -81,25 +81,7 @@ class Faction {
 export async function loadReserveFaction(fullPath: string, stage: Stage): Promise<Faction|null> {
     const response = await fetch(stage.characterDetailQuery.replace('{fullPath}', fullPath));
     const item = await response.json();
-    const dataName = item.node.definition.name.replaceAll('{{char}}', item.node.definition.name).replaceAll('{{user}}', 'Individual X');
-    
-    // Similar banned word substitutes as Actor
-    const bannedWordSubstitutes: {[key: string]: string} = {
-        'underage': 'young adult',
-        'adolescent': 'young adult',
-        'youngster': 'young adult',
-        'teen': 'young adult',
-        'highschooler': 'young adult',
-        'child': 'child',
-        'toddler': 'toddler',
-        'infant': 'infant',
-        'kid': 'joke',
-        'baby': 'honey',
-        'minor': 'trivial',
-        'old-school': 'retro',
-        'high school': 'college',
-        'school': 'college'
-    };
+    const dataName = item.node.definition.name.replaceAll('{{char}}', item.node.definition.name).replaceAll('{{user}}', 'Individual X')
     
     const data = {
         name: dataName,
@@ -111,14 +93,10 @@ export async function loadReserveFaction(fullPath: string, stage: Stage): Promis
     data.name = data.name.replace(/{/g, '(').replace(/}/g, ')');
     data.personality = data.personality.replace(/{/g, '(').replace(/}/g, ')');
 
-    // Apply banned word substitutions
-    for (const [bannedWord, substitute] of Object.entries(bannedWordSubstitutes)) {
-        const regex = new RegExp(bannedWord, 'gi');
-        data.name = data.name.replace(regex, substitute);
-        data.personality = data.personality.replace(regex, substitute);
+  
     }
 
-    // Check for banned words and non-english characters
+    // Check for non-english characters
     if (Object.keys(bannedWordSubstitutes).some(word => data.personality.toLowerCase().includes(word) || data.name.toLowerCase().includes(word))) {
         console.log(`Immediately discarding faction due to banned words: ${data.name}`);
         return null;
