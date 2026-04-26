@@ -35,7 +35,7 @@ export function gradeToScore(grade: string): number {
  * 
  * @param actor - The actor to assign to the role
  * @param targetModule - The module (with a 'role' attribute) to assign the actor to
- * @param layout - The station layout
+ * @param layout - The manor layout
  */
 export function assignActorToRole(stage: Stage,
     actor: any, 
